@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STAR VANGUARD - Космический Шутер</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #000;
+            overflow: hidden;
+            font-family: 'Rajdhani', sans-serif;
+            color: #fff;
+        }
+        
+        #gameCanvas {
+            display: block;
+            background: radial-gradient(ellipse at center, #1a0033 0%, #000 100%);
+        }
+        
+        .ui-overlay {
+            position: absolute;
+            pointer-events: none;
+            text-shadow: 0 0 10px currentColor;
+        }
+        
+        #topUI {
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 18px;
+        }
+        
+        .stat-box {
+            background: rgba(0, 20, 40, 0.8);
+            border: 1px solid #00ffff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .health-bar {
+            width: 200px;
+            height: 20px;
+            background: #330000;
+            border: 2px solid #ff0044;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff0044, #ff8800);
+            transition: width 0.3s;
+        }
+        
+        #weaponUI {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .weapon-slot {
+            width: 60px;
+            height: 60px;
+            border: 2px solid #444;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.7);
+            transition: all 0.3s;
+        }
+        
+        .weapon-slot.active {
+            border-color: #00ffff;
+            box-shadow: 0 0 20px #00ffff;
+            transform: scale(1.1);
+        }
+        
+        .weapon-slot.overheated {
+            border-color: #ff4400;
+            animation: pulse 0.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        #centerMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            font-family: 'Orbitron', sans-serif;
+            pointer-events: auto;
+        }
+        
+        .title {
+            font-size: 72px;
+            font-weight: 900;
+            background: linear-gradient(45deg, #00ffff, #ff00ff, #ffff00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: titleGlow 3s ease-in-out infinite;
+            letter-spacing: 10px;
+        }
+        
+        @keyframes titleGlow {
+            0%, 100% { filter: drop-shadow(0 0 20px #00ffff); }
+            50% { filter: drop-shadow(0 0 40px #ff00ff); }
+        }
+        
+        .subtitle {
+            font-size: 24px;
+            color: #aaa;
+            margin: 20px 0;
+            letter-spacing: 5px;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #00ffff, #0088ff);
+            border: none;
+            padding: 15px 40px;
+            font-size: 20px;
+            color: #000;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin: 10px;
+        }
+        
+        .btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 30px #00ffff;
+        }
+        
+        #upgradeMenu {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 10, 30, 0.95);
+            border: 2px solid #00ffff;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            width: 90%;
+            pointer-events: auto;
+        }
+        
+        .upgrade-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .upgrade-card {
+            background: rgba(0, 50, 100, 0.3);
+            border: 1px solid #0088ff;
+            border-radius: 10px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+        
+        .upgrade-card:hover {
+            background: rgba(0, 100, 200, 0.5);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 255, 255, 0.3);
+        }
+        
+        .upgrade-card.maxed {
+            opacity: 0.5;
+            cursor: not-allowed;
+            border-color: #666;
+        }
+        
+        .upgrade-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+        
+        .upgrade-name {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 16px;
+            color: #00ffff;
+            margin-bottom: 5px;
+        }
+        
+        .upgrade-desc {
+            font-size: 14px;
+            color: #aaa;
+            margin-bottom: 10px;
+        }
+        
+        .upgrade-cost {
+            color: #ffff00;
+            font-weight: 700;
+        }
+        
+        #bossWarning {
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 48px;
+            color: #ff0044;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.5s;
+            text-shadow: 0 0 30px #ff0044;
+        }
+        
+        .warning-pulse {
+            animation: warningPulse 2s ease-in-out;
+        }
+        
+        @keyframes warningPulse {
+            0%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+        }
+        
+        #waveIndicator {
+            position: absolute;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 24px;
+            color: #ffff00;
+            opacity: 0;
+            transition: opacity 1s;
+        }
+        
+        .particle {
+            position: absolute;
+            pointer-events: none;
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            text-align: right;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .key {
+            display: inline-block;
+            background: rgba(255,255,255,0.1);
+            padding: 2px 8px;
+            border-radius: 3px;
+            margin: 0 2px;
+            border: 1px solid #444;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    
+    <div id="topUI" class="ui-overlay">
+        <div>
+            <div class="stat-box">
+                <div>ЗДОРОВЬЕ</div>
+                <div class="health-bar">
+                    <div class="health-fill" id="healthFill" style="width: 100%"></div>
+                </div>
+            </div>
+            <div class="stat-box" style="margin-top: 10px;">
+                <div>ЩИТ: <span id="shieldText">100%</span></div>
+            </div>
+        </div>
+        <div style="text-align: right;">
+            <div class="stat-box">
+                <div>СЧЁТ: <span id="scoreText" style="color: #00ffff; font-size: 24px;">0</span></div>
+            </div>
+            <div class="stat-box" style="margin-top: 10px;">
+                <div>КРЕДИТЫ: <span id="creditsText" style="color: #ffff00; font-size: 20px;">0</span> 💎</div>
+            </div>
+            <div class="stat-box" style="margin-top: 10px;">
+                <div>ВОЛНА: <span id="waveText" style="color: #ff00ff;">1</span></div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="weaponUI" class="ui-overlay">
+        <div class="weapon-slot active" id="slot1" title="Плазменная пушка (1)">🔫</div>
+        <div class="weapon-slot" id="slot2" title="Ракеты (2)">🚀</div>
+        <div class="weapon-slot" id="slot3" title="Лазер (3)">⚡</div>
+    </div>
+    
+    <div id="waveIndicator" class="ui-overlay">ВОЛНА 1</div>
+    <div id="bossWarning" class="ui-overlay">ВНИМАНИЕ: БОСС ПРИБЛИЖАЕТСЯ</div>
+    
+    <div id="centerMessage">
+        <div class="title">STAR VANGUARD</div>
+        <div class="subtitle">КОСМИЧЕСКИЙ ЗАЩИТНИК</div>
+        <button class="btn" onclick="startGame()">НАЧАТЬ МИССИЮ</button>
+    </div>
+    
+    <div id="upgradeMenu">
+        <h2 style="font-family: 'Orbitron'; text-align: center; color: #00ffff; margin-bottom: 10px;">УЛУЧШЕНИЯ КОРАБЛЯ</h2>
+        <p style="text-align: center; color: #aaa;">Доступно кредитов: <span id="menuCredits" style="color: #ffff00; font-size: 24px;">0</span></p>
+        <div class="upgrade-grid" id="upgradeGrid"></div>
+        <div style="text-align: center; margin-top: 30px;">
+            <button class="btn" onclick="closeUpgradeMenu()">ПРОДОЛЖИТЬ</button>
+        </div>
+    </div>
+    
+    <div id="controls" class="ui-overlay">
+        <div><span class="key">WASD</span> / <span class="key">Стрелки</span> — Движение</div>
+        <div><span class="key">Пробел</span> / <span class="key">ЛКМ</span> — Стрельба</div>
+        <div><span class="key">1</span> <span class="key">2</span> <span class="key">3</span> — Оружие</div>
+        <div><span class="key">P</span> — Пауза / Улучшения</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        
+        // Игровое состояние
+        let gameState = 'menu'; // menu, playing, paused, gameover
+        let score = 0;
+        let credits = 0;
+        let wave = 1;
+        let frame = 0;
+        
+        // Управление
+        const keys = {};
+        let mouse = { x: 0, y: 0, down: false };
+        
+        // Игрок
+        const player = {
+            x: canvas.width / 2,
+            y: canvas.height - 100,
+            width: 40,
+            height: 50,
+            speed: 5,
+            maxHealth: 100,
+            health: 100,
+            maxShield: 100,
+            shield: 100,
+            shieldRegen: 0.2,
+            weapon: 0,
+            weapons: [
+                { name: 'Плазма', damage: 10, fireRate: 8, heat: 0, maxHeat: 100, cooling: 2, projectileSpeed: 15, spread: 0, auto: true },
+                { name: 'Ракеты', damage: 50, fireRate: 20, heat: 0, maxHeat: 50, cooling: 1, projectileSpeed: 8, spread: 0.3, auto: false, piercing: false },
+                { name: 'Лазер', damage: 3, fireRate: 1, heat: 0, maxHeat: 150, cooling: 3, projectileSpeed: 25, spread: 0, auto: true, continuous: true }
+            ],
+            upgrades: {
+                damage: 1,
+                fireRate: 1,
+                speed: 1,
+                health: 1,
+                shield: 1,
+                multishot: 1
+            }
+        };
+        
+        // Объекты игры
+        let projectiles = [];
+        let enemies = [];
+        let particles = [];
+        let powerups = [];
+        let stars = [];
+        let boss = null;
+        
+        // Волны
+        let waveInProgress = false;
+        let enemiesToSpawn = 0;
+        let spawnTimer = 0;
+        let bossFight = false;
+        
+        // Инициализация звёзд
+        for (let i = 0; i < 200; i++) {
+            stars.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 2,
+                speed: Math.random() * 3 + 0.5,
+                brightness: Math.random()
+            });
+        }
+        
+        // Классы
+        
+        class Projectile {
+            constructor(x, y, angle, weapon, isPlayer = true) {
+                this.x = x;
+                this.y = y;
+                this.angle = angle;
+                this.weapon = weapon;
+                this.isPlayer = isPlayer;
+                this.speed = weapon.projectileSpeed;
+                this.damage = weapon.damage * (isPlayer ? player.upgrades.damage : 1);
+                this.life = 100;
+                this.piercing = weapon.piercing || false;
+                this.pierced = [];
+                
+                if (weapon.continuous) {
+                    this.length = 800;
+                    this.width = 4;
+                }
+            }
+            
+            update() {
+                if (this.weapon.continuous) {
+                    this.life -= 2;
+                    // Лазер мгновенно попадает
+                    return;
+                }
+                
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed;
+                this.life--;
+            }
+            
+            draw() {
+                ctx.save();
+                if (this.weapon.continuous) {
+                    // Лазер
+                    const gradient = ctx.createLinearGradient(
+                        this.x, this.y,
+                        this.x + Math.cos(this.angle) * this.length,
+                        this.y + Math.sin(this.angle) * this.length
+                    );
+                    gradient.addColorStop(0, 'rgba(0, 255, 255, 0)');
+                    gradient.addColorStop(0.1, 'rgba(0, 255, 255, 0.8)');
+                    gradient.addColorStop(0.5, 'rgba(255, 255, 255, 1)');
+                    gradient.addColorStop(0.9, 'rgba(0, 255, 255, 0.8)');
+                    gradient.addColorStop(1, 'rgba(0, 255, 255, 0)');
+                    
+                    ctx.strokeStyle = gradient;
+                    ctx.lineWidth = this.width;
+                    ctx.lineCap = 'round';
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y);
+                    ctx.lineTo(
+                        this.x + Math.cos(this.angle) * this.length,
+                        this.y + Math.sin(this.angle) * this.length
+                    );
+                    ctx.stroke();
+                    
+                    // Свечение
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = '#00ffff';
+                    ctx.stroke();
+                } else if (this.weapon.name === 'Ракеты') {
+                    // Ракета
+                    ctx.translate(this.x, this.y);
+                    ctx.rotate(this.angle);
+                    
+                    ctx.fillStyle = '#ff4400';
+                    ctx.beginPath();
+                    ctx.moveTo(10, 0);
+                    ctx.lineTo(-5, 5);
+                    ctx.lineTo(-5, -5);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // Огонь сзади
+                    ctx.fillStyle = '#ffff00';
+                    ctx.beginPath();
+                    ctx.moveTo(-5, 0);
+                    ctx.lineTo(-15, 3);
+                    ctx.lineTo(-15, -3);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // Частицы двигателя
+                    if (Math.random() > 0.5) {
+                        particles.push(new Particle(
+                            this.x - Math.cos(this.angle) * 15,
+                            this.y - Math.sin(this.angle) * 15,
+                            'fire'
+                        ));
+                    }
+                } else {
+                    // Плазма
+                    ctx.translate(this.x, this.y);
+                    ctx.rotate(this.angle);
+                    
+                    const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, 10);
+                    gradient.addColorStop(0, '#ffffff');
+                    gradient.addColorStop(0.3, '#00ffff');
+                    gradient.addColorStop(1, 'transparent');
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.beginPath();
+                    ctx.arc(0, 0, 8, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.shadowBlur = 15;
+                    ctx.shadowColor = '#00ffff';
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+        }
+        
+        class Enemy {
+            constructor(type = 'basic') {
+                this.type = type;
+                this.width = 30;
+                this.height = 30;
+                this.x = Math.random() * (canvas.width - 100) + 50;
+                this.y = -50;
+                this.angle = Math.PI / 2;
+                this.destroyed = false;
+                
+                // Характеристики по типу
+                switch(type) {
+                    case 'basic':
+                        this.speed = 2 + wave * 0.3;
+                        this.health = 20 + wave * 5;
+                        this.maxHealth = this.health;
+                        this.score = 100;
+                        this.color = '#ff0044';
+                        break;
+                    case 'fast':
+                        this.speed = 4 + wave * 0.4;
+                        this.health = 15 + wave * 3;
+                        this.maxHealth = this.health;
+                        this.score = 150;
+                        this.color = '#ff8800';
+                        this.width = 25;
+                        break;
+                    case 'tank':
+                        this.speed = 1 + wave * 0.2;
+                        this.health = 50 + wave * 10;
+                        this.maxHealth = this.health;
+                        this.score = 250;
+                        this.color = '#8800ff';
+                        this.width = 45;
+                        this.height = 45;
+                        break;
+                    case 'shooter':
+                        this.speed = 1.5 + wave * 0.2;
+                        this.health = 30 + wave * 6;
+                        this.maxHealth = this.health;
+                        this.score = 200;
+                        this.color = '#00ff88';
+                        this.fireRate = 60;
+                        this.fireTimer = 0;
+                        break;
+                    case 'elite':
+                        this.speed = 3 + wave * 0.3;
+                        this.health = 80 + wave * 15;
+                        this.maxHealth = this.health;
+                        this.score = 500;
+                        this.color = '#ffff00';
+                        this.width = 35;
+                        this.height = 40;
+                        break;
+                }
+                
+                this.vx = 0;
+                this.vy = this.speed;
+                this.moveTimer = 0;
+            }
+            
+            update() {
+                // AI движения
+                this.moveTimer++;
+                
+                switch(this.type) {
+                    case 'basic':
+                        this.y += this.speed;
+                        this.x += Math.sin(this.y * 0.02) * 2;
+                        break;
+                    case 'fast':
+                        this.y += this.speed;
+                        this.x += (player.x - this.x) * 0.02;
+                        break;
+                    case 'tank':
+                        this.y += this.speed;
+                        break;
+                    case 'shooter':
+                        this.y += this.speed * 0.5;
+                        this.fireTimer++;
+                        if (this.fireTimer >= this.fireRate && this.y > 0 && this.y < canvas.height - 200) {
+                            this.fireTimer = 0;
+                            const angle = Math.atan2(player.y - this.y, player.x - this.x);
+                            projectiles.push(new Projectile(this.x, this.y + 20, angle, {
+                                damage: 10,
+                                projectileSpeed: 6,
+                                continuous: false
+                            }, false));
+                        }
+                        break;
+                    case 'elite':
+                        this.y += this.speed;
+                        this.x += Math.sin(frame * 0.05) * 3;
+                        // Элитные стреляют
+                        if (frame % 40 === 0 && this.y > 0) {
+                            const angle = Math.atan2(player.y - this.y, player.x - this.x);
+                            projectiles.push(new Projectile(this.x, this.y + 20, angle, {
+                                damage: 15,
+                                projectileSpeed: 8,
+                                continuous: false
+                            }, false));
+                        }
+                        break;
+                }
+                
+                // Проверка выхода за экран
+                if (this.y > canvas.height + 50) {
+                    this.destroyed = true;
+                }
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                
+                // Свечение
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = this.color;
+                
+                // Корпус
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                
+                switch(this.type) {
+                    case 'basic':
+                        ctx.moveTo(0, this.height/2);
+                        ctx.lineTo(-this.width/2, -this.height/2);
+                        ctx.lineTo(this.width/2, -this.height/2);
+                        break;
+                    case 'fast':
+                        ctx.moveTo(0, this.height/2);
+                        ctx.lineTo(-this.width/2, 0);
+                        ctx.lineTo(0, -this.height/2);
+                        ctx.lineTo(this.width/2, 0);
+                        break;
+                    case 'tank':
+                        ctx.rect(-this.width/2, -this.height/2, this.width, this.height);
+                        break;
+                    case 'shooter':
+                        ctx.moveTo(0, -this.height/2);
+                        ctx.lineTo(this.width/2, this.height/2);
+                        ctx.lineTo(0, this.height/4);
+                        ctx.lineTo(-this.width/2, this.height/2);
+                        break;
+                    case 'elite':
+                        ctx.moveTo(0, -this.height/2);
+                        for (let i = 0; i < 5; i++) {
+                            const angle = (i * Math.PI * 2 / 5) - Math.PI/2;
+                            const r = i % 2 === 0 ? this.height/2 : this.height/4;
+                            ctx.lineTo(Math.cos(angle) * r, Math.sin(angle) * r);
+                        }
+                        ctx.closePath();
+                        break;
+                }
+                
+                ctx.closePath();
+                ctx.fill();
+                
+                // Детали
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                ctx.beginPath();
+                ctx.arc(0, 0, this.width/4, 0, Math.PI*2);
+                ctx.fill();
+                
+                // Полоска здоровья
+                if (this.health < this.maxHealth) {
+                    ctx.fillStyle = '#330000';
+                    ctx.fillRect(-this.width/2, -this.height/2 - 10, this.width, 4);
+                    ctx.fillStyle = '#ff0044';
+                    ctx.fillRect(-this.width/2, -this.height/2 - 10, this.width * (this.health/this.maxHealth), 4);
+                }
+                
+                ctx.restore();
+            }
+            
+            takeDamage(damage) {
+                this.health -= damage;
+                if (this.health <= 0) {
+                    this.destroyed = true;
+                    createExplosion(this.x, this.y, this.color, 20);
+                    score += this.score;
+                    credits += Math.floor(this.score / 10);
+                    updateUI();
+                    
+                    // Шанс на дроп
+                    if (Math.random() < 0.1) {
+                        powerups.push(new Powerup(this.x, this.y));
+                    }
+                }
+            }
+        }
+        
+        class Boss {
+            constructor() {
+                this.x = canvas.width / 2;
+                this.y = -100;
+                this.targetY = 150;
+                this.width = 120;
+                this.height = 100;
+                this.health = 1000 + wave * 200;
+                this.maxHealth = this.health;
+                this.speed = 2;
+                this.phase = 0;
+                this.phaseTimer = 0;
+                this.destroyed = false;
+                this.angle = 0;
+            }
+            
+            update() {
+                // Вход на экран
+                if (this.y < this.targetY) {
+                    this.y += 2;
+                }
+                
+                this.phaseTimer++;
+                this.angle += 0.02;
+                
+                // Фазы атаки босса
+                if (this.phaseTimer % 300 < 100) {
+                    // Фаза 1: Круговой обстрел
+                    if (this.phaseTimer % 20 === 0) {
+                        for (let i = 0; i < 8; i++) {
+                            const angle = (Math.PI * 2 / 8) * i + this.angle;
+                            projectiles.push(new Projectile(this.x, this.y, angle, {
+                                damage: 20,
+                                projectileSpeed: 5,
+                                continuous: false
+                            }, false));
+                        }
+                    }
+                } else if (this.phaseTimer % 300 < 200) {
+                    // Фаза 2: Наводящиеся ракеты
+                    if (this.phaseTimer % 30 === 0) {
+                        for (let i = -1; i <= 1; i++) {
+                            const angle = Math.atan2(player.y - this.y, player.x - this.x) + i * 0.3;
+                            projectiles.push(new Projectile(this.x, this.y + 30, angle, {
+                                damage: 30,
+                                projectileSpeed: 4,
+                                continuous: false
+                            }, false));
+                        }
+                    }
+                } else {
+                    // Фаза 3: Лазерный залп
+                    if (this.phaseTimer % 300 === 200) {
+                        // Предупреждение
+                        for (let i = 0; i < 5; i++) {
+                            setTimeout(() => {
+                                particles.push(new Particle(this.x, this.y, 'warning'));
+                            }, i * 200);
+                        }
+                    }
+                    if (this.phaseTimer % 300 > 250) {
+                        // Лазер
+                        if (this.phaseTimer % 5 === 0) {
+                            const angle = Math.atan2(player.y - this.y, player.x - this.x);
+                            projectiles.push(new Projectile(this.x, this.y + 40, angle, {
+                                damage: 5,
+                                projectileSpeed: 20,
+                                continuous: true
+                            }, false));
+                        }
+                    }
+                }
+                
+                // Движение босса
+                this.x = canvas.width/2 + Math.sin(this.angle) * 200;
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                
+                // Свечение
+                ctx.shadowBlur = 40;
+                ctx.shadowColor = '#ff00ff';
+                
+                // Корпус босса
+                ctx.fillStyle = '#440044';
+                ctx.beginPath();
+                ctx.moveTo(0, -this.height/2);
+                ctx.lineTo(this.width/2, -this.height/4);
+                ctx.lineTo(this.width/2, this.height/4);
+                ctx.lineTo(0, this.height/2);
+                ctx.lineTo(-this.width/2, this.height/4);
+                ctx.lineTo(-this.width/2, -this.height/4);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Ядро
+                const pulse = Math.sin(frame * 0.1) * 0.2 + 0.8;
+                ctx.fillStyle = `rgba(255, 0, 255, ${pulse})`;
+                ctx.beginPath();
+                ctx.arc(0, 0, 30, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Орудия
+                ctx.fillStyle = '#880088';
+                ctx.fillRect(-this.width/2 - 10, -20, 20, 40);
+                ctx.fillRect(this.width/2 - 10, -20, 20, 40);
+                
+                // Полоска здоровья босса
+                ctx.fillStyle = '#330033';
+                ctx.fillRect(-this.width/2, -this.height/2 - 20, this.width, 10);
+                ctx.fillStyle = '#ff00ff';
+                ctx.fillRect(-this.width/2, -this.height/2 - 20, this.width * (this.health/this.maxHealth), 10);
+                
+                // Имя босса
+                ctx.fillStyle = '#ff00ff';
+                ctx.font = '20px Orbitron';
+                ctx.textAlign = 'center';
+                ctx.fillText('STAR DESTROYER', 0, -this.height/2 - 30);
+                
+                ctx.restore();
+            }
+            
+            takeDamage(damage) {
+                this.health -= damage;
+                if (this.health <= 0) {
+                    this.destroyed = true;
+                    createExplosion(this.x, this.y, '#ff00ff', 50);
+                    score += 5000;
+                    credits += 1000;
+                    updateUI();
+                    endBossFight();
+                }
+            }
+        }
+        
+        class Particle {
+            constructor(x, y, type, color) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.life = 1;
+                this.decay = Math.random() * 0.02 + 0.01;
+                
+                switch(type) {
+                    case 'explosion':
+                        this.vx = (Math.random() - 0.5) * 10;
+                        this.vy = (Math.random() - 0.5) * 10;
+                        this.size = Math.random() * 5 + 2;
+                        this.color = color || '#ff8800';
+                        break;
+                    case 'fire':
+                        this.vx = (Math.random() - 0.5) * 2;
+                        this.vy = Math.random() * 3 + 2;
+                        this.size = Math.random() * 3 + 1;
+                        this.color = '#ff4400';
+                        this.decay = 0.05;
+                        break;
+                    case 'spark':
+                        this.vx = (Math.random() - 0.5) * 8;
+                        this.vy = (Math.random() - 0.5) * 8;
+                        this.size = Math.random() * 2;
+                        this.color = '#00ffff';
+                        break;
+                    case 'warning':
+                        this.vx = 0;
+                        this.vy = 5;
+                        this.size = 20;
+                        this.color = '#ff0000';
+                        this.decay = 0.1;
+                        break;
+                    case 'star':
+                        this.vx = 0;
+                        this.vy = Math.random() * 3 + 0.5;
+                        this.size = Math.random() * 2;
+                        this.color = '#ffffff';
+                        this.decay = 0;
+                        break;
+                }
+            }
+            
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= this.decay;
+                
+                if (this.type === 'star') {
+                    if (this.y > canvas.height) {
+                        this.y = 0;
+                        this.x = Math.random() * canvas.width;
+                    }
+                }
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.color;
+                
+                if (this.type === 'warning') {
+                    ctx.strokeStyle = this.color;
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y - 10);
+                    ctx.lineTo(this.x + 10, this.y + 10);
+                    ctx.lineTo(this.x - 10, this.y + 10);
+                    ctx.closePath();
+                    ctx.stroke();
+                } else {
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                ctx.restore();
+            }
+        }
+        
+        class Powerup {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.vy = 2;
+                this.size = 20;
+                this.type = ['health', 'shield', 'weapon', 'credits'][Math.floor(Math.random() * 4)];
+                this.life = 600;
+            }
+            
+            update() {
+                this.y += this.vy;
+                this.life--;
+                
+                // Притягивание к игроку
+                const dx = player.x - this.x;
+                const dy = player.y - this.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                if (dist < 200) {
+                    this.x += dx * 0.05;
+                    this.y += dy * 0.05;
+                }
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                
+                const colors = {
+                    health: '#ff0044',
+                    shield: '#0088ff',
+                    weapon: '#ffff00',
+                    credits: '#00ff00'
+                };
+                
+                const icons = {
+                    health: '❤️',
+                    shield: '🛡️',
+                    weapon: '⚡',
+                    credits: '💎'
+                };
+                
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = colors[this.type];
+                
+                ctx.fillStyle = colors[this.type];
+                ctx.beginPath();
+                ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#fff';
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(icons[this.type], 0, 0);
+                
+                ctx.restore();
+            }
+        }
+        
+        // Функции игры
+        
+        function createExplosion(x, y, color, count) {
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(x, y, 'explosion', color));
+            }
+            for (let i = 0; i < count/2; i++) {
+                particles.push(new Particle(x, y, 'spark'));
+            }
+        }
+        
+        function startGame() {
+            document.getElementById('centerMessage').style.display = 'none';
+            gameState = 'playing';
+            resetGame();
+            gameLoop();
+        }
+        
+        function resetGame() {
+            player.health = player.maxHealth * player.upgrades.health;
+            player.shield = player.maxShield * player.upgrades.shield;
+            player.x = canvas.width / 2;
+            player.y = canvas.height - 100;
+            
+            projectiles = [];
+            enemies = [];
+            particles = [];
+            powerups = [];
+            boss = null;
+            
+            score = 0;
+            wave = 1;
+            waveInProgress = true;
+            enemiesToSpawn = 10;
+            bossFight = false;
+            
+            updateUI();
+            startWave();
+        }
+        
+        function startWave() {
+            waveInProgress = true;
+            enemiesToSpawn = 10 + wave * 5;
+            
+            // Показать индикатор волны
+            const indicator = document.getElementById('waveIndicator');
+            indicator.textContent = bossFight ? 'БОСС!' : `ВОЛНА ${wave}`;
+            indicator.style.opacity = 1;
+            setTimeout(() => {
+                indicator.style.opacity = 0;
+            }, 3000);
+            
+            // Предупреждение о боссе
+            if (wave % 5 === 0 && !bossFight) {
+                const warning = document.getElementById('bossWarning');
+                warning.classList.add('warning-pulse');
+                setTimeout(() => {
+                    warning.classList.remove('warning-pulse');
+                    startBossFight();
+                }, 2000);
+            }
+        }
+        
+        function startBossFight() {
+            bossFight = true;
+            boss = new Boss();
+        }
+        
+        function endBossFight() {
+            bossFight = false;
+            boss = null;
+            wave++;
+            startWave();
+        }
+        
+        function spawnEnemy() {
+            if (enemiesToSpawn <= 0) return;
+            
+            const types = ['basic', 'basic', 'fast'];
+            if (wave > 2) types.push('tank');
+            if (wave > 3) types.push('shooter');
+            if (wave > 4) types.push('elite');
+            
+            const type = types[Math.floor(Math.random() * types.length)];
+            enemies.push(new Enemy(type));
+            enemiesToSpawn--;
+        }
+        
+        function updatePlayer() {
+            // Движение
+            let dx = 0;
+            let dy = 0;
+            
+            if (keys['KeyW'] || keys['ArrowUp']) dy = -1;
+            if (keys['KeyS'] || keys['ArrowDown']) dy = 1;
+            if (keys['KeyA'] || keys['ArrowLeft']) dx = -1;
+            if (keys['KeyD'] || keys['ArrowRight']) dx = 1;
+            
+            // Нормализация диагонали
+            if (dx !== 0 && dy !== 0) {
+                dx *= 0.707;
+                dy *= 0.707;
+            }
+            
+            const speed = player.speed * player.upgrades.speed;
+            player.x += dx * speed;
+            player.y += dy * speed;
+            
+            // Ограничение экрана
+            player.x = Math.max(30, Math.min(canvas.width - 30, player.x));
+            player.y = Math.max(30, Math.min(canvas.height - 30, player.y));
+            
+            // Реген щита
+            if (player.shield < player.maxShield * player.upgrades.shield) {
+                player.shield += player.shieldRegen;
+            }
+            
+            // Стрельба
+            const weapon = player.weapons[player.weapon];
+            
+            // Охлаждение
+            weapon.heat = Math.max(0, weapon.heat - weapon.cooling);
+            
+            // Перегрев
+            const slot = document.getElementById(`slot${player.weapon + 1}`);
+            if (weapon.heat >= weapon.maxHeat) {
+                slot.classList.add('overheated');
+            } else {
+                slot.classList.remove('overheated');
+            }
+            
+            // Выстрел
+            if ((keys['Space'] || mouse.down) && weapon.heat < weapon.maxHeat) {
+                if (frame % Math.floor(weapon.fireRate / player.upgrades.fireRate) === 0) {
+                    weapon.heat += weapon.continuous ? 0.5 : 10;
+                    
+                    const baseAngle = -Math.PI / 2;
+                    const spread = weapon.spread || 0;
+                    
+                    for (let i = 0; i < player.upgrades.multishot; i++) {
+                        const angleOffset = (i - (player.upgrades.multishot - 1) / 2) * 0.1;
+                        const angle = baseAngle + angleOffset + (Math.random() - 0.5) * spread;
+                        
+                        projectiles.push(new Projectile(
+                            player.x + (i - 1) * 15,
+                            player.y - 20,
+                            angle,
+                            weapon
+                        ));
+                    }
+                    
+                    // Отдача
+                    if (!weapon.continuous) {
+                        player.y += 2;
+                    }
+                }
+            }
+        }
+        
+        function checkCollisions() {
+            // Снаряды игрока
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i];
+                if (!p.isPlayer) continue;
+                
+                // Проверка попадания во врагов
+                if (boss && bossFight) {
+                    const dx = p.x - boss.x;
+                    const dy = p.y - boss.y;
+                    if (Math.sqrt(dx*dx + dy*dy) < boss.width/2) {
+                        boss.takeDamage(p.damage);
+                        if (!p.piercing) {
+                            projectiles.splice(i, 1);
+                            continue;
+                        }
+                    }
+                }
+                
+                for (let enemy of enemies) {
+                    const dx = p.x - enemy.x;
+                    const dy = p.y - enemy.y;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    
+                    if (dist < enemy.width/2 + 10) {
+                        enemy.takeDamage(p.damage);
+                        
+                        // Частицы попадания
+                        for (let k = 0; k < 3; k++) {
+                            particles.push(new Particle(p.x, p.y, 'spark'));
+                        }
+                        
+                        if (!p.piercing || enemy.pierced.includes(enemy)) {
+                            if (!p.weapon.continuous) {
+                                projectiles.splice(i, 1);
+                            }
+                            break;
+                        } else {
+                            enemy.pierced.push(enemy);
+                        }
+                    }
+                }
+                
+                // Лазер проверяется отдельно
+                if (p.weapon.continuous) {
+                    // Линейная проверка для лазера
+                    const cos = Math.cos(p.angle);
+                    const sin = Math.sin(p.angle);
+                    
+                    for (let enemy of enemies) {
+                        const dx = enemy.x - p.x;
+                        const dy = enemy.y - p.y;
+                        const proj = dx * cos + dy * sin;
+                        
+                        if (proj > 0 && proj < p.length) {
+                            const perp = Math.abs(dx * sin - dy * cos);
+                            if (perp < 20) {
+                                enemy.takeDamage(p.damage);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Снаряды врагов
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                const p = projectiles[i];
+                if (p.isPlayer) continue;
+                
+                const dx = p.x - player.x;
+                const dy = p.y - player.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                if (dist < 25) {
+                    // Попадание по игроку
+                    const damage = p.damage;
+                    
+                    if (player.shield > 0) {
+                        player.shield -= damage;
+                        if (player.shield < 0) {
+                            player.health += player.shield;
+                            player.shield = 0;
+                        }
+                    } else {
+                        player.health -= damage;
+                    }
+                    
+                    createExplosion(player.x, player.y, '#ff0000', 5);
+                    
+                    if (!p.weapon.continuous) {
+                        projectiles.splice(i, 1);
+                    }
+                    
+                    updateUI();
+                    
+                    if (player.health <= 0) {
+                        gameOver();
+                    }
+                }
+            }
+            
+            // Столкновение с врагами
+            for (let enemy of enemies) {
+                const dx = enemy.x - player.x;
+                const dy = enemy.y - player.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                if (dist < enemy.width/2 + 20) {
+                    player.health -= 20;
+                    enemy.takeDamage(50);
+                    createExplosion((player.x + enemy.x)/2, (player.y + enemy.y)/2, '#ff8800', 10);
+                    updateUI();
+                    
+                    if (player.health <= 0) {
+                        gameOver();
+                    }
+                }
+            }
+            
+            // Подбор усилений
+            for (let i = powerups.length - 1; i >= 0; i--) {
+                const pu = powerups[i];
+                const dx = pu.x - player.x;
+                const dy = pu.y - player.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                
+                if (dist < 40) {
+                    switch(pu.type) {
+                        case 'health':
+                            player.health = Math.min(player.maxHealth * player.upgrades.health, player.health + 30);
+                            break;
+                        case 'shield':
+                            player.shield = player.maxShield * player.upgrades.shield;
+                            break;
+                        case 'weapon':
+                            player.weapons.forEach(w => w.maxHeat *= 1.5);
+                            break;
+                        case 'credits':
+                            credits += 100;
+                            break;
+                    }
+                    powerups.splice(i, 1);
+                    updateUI();
+                }
+            }
+        }
+        
+        function drawPlayer() {
+            ctx.save();
+            ctx.translate(player.x, player.y);
+            
+            // Свечение двигателя
+            ctx.shadowBlur = 30;
+            ctx.shadowColor = '#00ffff';
+            
+            // Двигатели
+            ctx.fillStyle = '#0088ff';
+            ctx.beginPath();
+            ctx.moveTo(-15, 10);
+            ctx.lineTo(-20, 25);
+            ctx.lineTo(-10, 25);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.moveTo(15, 10);
+            ctx.lineTo(20, 25);
+            ctx.lineTo(10, 25);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Огонь двигателя
+            const flameHeight = 15 + Math.random() * 10;
+            const gradient = ctx.createLinearGradient(0, 25, 0, 25 + flameHeight);
+            gradient.addColorStop(0, '#00ffff');
+            gradient.addColorStop(0.5, '#0088ff');
+            gradient.addColorStop(1, 'transparent');
+            
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.moveTo(-15, 25);
+            ctx.lineTo(-5, 25 + flameHeight);
+            ctx.lineTo(0, 25);
+            ctx.lineTo(5, 25 + flameHeight);
+            ctx.lineTo(15, 25);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Корпус
+            ctx.fillStyle = '#cccccc';
+            ctx.beginPath();
+            ctx.moveTo(0, -25);
+            ctx.lineTo(-20, 15);
+            ctx.lineTo(-10, 25);
+            ctx.lineTo(0, 15);
+            ctx.lineTo(10, 25);
+            ctx.lineTo(20, 15);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Кабина
+            ctx.fillStyle = '#00ffff';
+            ctx.beginPath();
+            ctx.moveTo(0, -10);
+            ctx.lineTo(-8, 5);
+            ctx.lineTo(8, 5);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Крылья
+            ctx.fillStyle = '#aaaaaa';
+            ctx.fillRect(-25, 0, 10, 20);
+            ctx.fillRect(15, 0, 10, 20);
+            
+            // Орудия
+            ctx.fillStyle = '#666';
+            ctx.fillRect(-22, -5, 6, 15);
+            ctx.fillRect(16, -5, 6, 15);
+            
+            // Щит (если активен)
+            if (player.shield > 0) {
+                ctx.strokeStyle = `rgba(0, 136, 255, ${player.shield / (player.maxShield * player.upgrades.shield) * 0.5})`;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(0, 0, 35, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            
+            ctx.restore();
+        }
+        
+        function drawBackground() {
+            // Звёзды
+            ctx.fillStyle = '#ffffff';
+            stars.forEach(star => {
+                ctx.globalAlpha = star.brightness;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                star.y += star.speed;
+                if (star.y > canvas.height) {
+                    star.y = 0;
+                    star.x = Math.random() * canvas.width;
+                }
+            });
+            ctx.globalAlpha = 1;
+            
+            // Туманности
+            const gradient = ctx.createRadialGradient(
+                canvas.width/2, canvas.height/2, 0,
+                canvas.width/2, canvas.height/2, canvas.width
+            );
+            gradient.addColorStop(0, 'rgba(26, 0, 51, 0.2)');
+            gradient.addColorStop(0.5, 'rgba(0, 20, 40, 0.1)');
+            gradient.addColorStop(1, 'transparent');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        
+        function updateUI() {
+            document.getElementById('scoreText').textContent = score.toLocaleString();
+            document.getElementById('creditsText').textContent = credits;
+            document.getElementById('waveText').textContent = wave;
+            document.getElementById('shieldText').textContent = Math.floor(player.shield) + '%';
+            
+            const healthPercent = (player.health / (player.maxHealth * player.upgrades.health)) * 100;
+            document.getElementById('healthFill').style.width = Math.max(0, healthPercent) + '%';
+        }
+        
+        function gameOver() {
+            gameState = 'gameover';
+            createExplosion(player.x, player.y, '#ff0000', 50);
+            
+            setTimeout(() => {
+                document.getElementById('centerMessage').style.display = 'block';
+                document.querySelector('.title').textContent = 'GAME OVER';
+                document.querySelector('.subtitle').textContent = `СЧЁТ: ${score.toLocaleString()} | ВОЛНА: ${wave}`;
+                document.querySelector('.btn').textContent = 'ПОВТОРИТЬ';
+            }, 1000);
+        }
+        
+        function toggleUpgradeMenu() {
+            if (gameState === 'playing') {
+                gameState = 'paused';
+                showUpgradeMenu();
+            } else if (gameState === 'paused') {
+                closeUpgradeMenu();
+            }
+        }
+        
+        function showUpgradeMenu() {
+            const menu = document.getElementById('upgradeMenu');
+            const grid = document.getElementById('upgradeGrid');
+            const creditsDisplay = document.getElementById('menuCredits');
+            
+            creditsDisplay.textContent = credits;
+            
+            const upgrades = [
+                { id: 'damage', name: 'УРОН', icon: '💥', desc: 'Увеличивает урон оружия', baseCost: 100, max: 10 },
+                { id: 'fireRate', name: 'СКОРОСТРЕЛЬНОСТЬ', icon: '⚡', desc: 'Увеличивает скорость стрельбы', baseCost: 150, max: 5 },
+                { id: 'speed', name: 'МАНЁВРЕННОСТЬ', icon: '🚀', desc: 'Увеличивает скорость корабля', baseCost: 80, max: 5 },
+                { id: 'health', name: 'КОРПУС', icon: '❤️', desc: 'Увеличивает здоровье', baseCost: 120, max: 5 },
+                { id: 'shield', name: 'ЩИТ', icon: '🛡️', desc: 'Увеличивает прочность щита', baseCost: 100, max: 5 },
+                { id: 'multishot', name: 'МУЛЬТИВЫСТРЕЛ', icon: '🔫', desc: 'Дополнительные снаряды', baseCost: 500, max: 3 }
+            ];
+            
+            grid.innerHTML = '';
+            upgrades.forEach(up => {
+                const current = player.upgrades[up.id];
+                const cost = up.baseCost * current;
+                const maxed = current >= up.max;
+                
+                const card = document.createElement('div');
+                card.className = `upgrade-card ${maxed ? 'maxed' : ''}`;
+                card.innerHTML = `
+                    <div class="upgrade-icon">${up.icon}</div>
+                    <div class="upgrade-name">${up.name}</div>
+                    <div class="upgrade-desc">${up.desc}</div>
+                    <div class="upgrade-cost">${maxed ? 'МАКСИМУМ' : cost + ' 💎'}</div>
+                    <div style="margin-top: 10px; color: #00ffff;">Ур. ${current}/${up.max}</div>
+                `;
+                
+                if (!maxed) {
+                    card.onclick = () => buyUpgrade(up.id, cost);
+                }
+                
+                grid.appendChild(card);
+            });
+            
+            menu.style.display = 'block';
+        }
+        
+        function buyUpgrade(type, cost) {
+            if (credits >= cost) {
+                credits -= cost;
+                player.upgrades[type]++;
+                updateUI();
+                showUpgradeMenu();
+            }
+        }
+        
+        function closeUpgradeMenu() {
+            document.getElementById('upgradeMenu').style.display = 'none';
+            gameState = 'playing';
+        }
+        
+        function gameLoop() {
+            if (gameState !== 'playing' && gameState !== 'paused') return;
+            
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            drawBackground();
+            
+            if (gameState === 'playing') {
+                frame++;
+                
+                // Спавн врагов
+                if (!bossFight && enemiesToSpawn > 0) {
+                    spawnTimer++;
+                    if (spawnTimer > Math.max(30, 120 - wave * 5)) {
+                        spawnEnemy();
+                        spawnTimer = 0;
+                    }
+                }
+                
+                // Проверка конца волны
+                if (!bossFight && enemiesToSpawn === 0 && enemies.length === 0) {
+                    wave++;
+                    startWave();
+                }
+                
+                updatePlayer();
+                
+                // Обновление снарядов
+                for (let i = projectiles.length - 1; i >= 0; i--) {
+                    projectiles[i].update();
+                    if (projectiles[i].life <= 0) {
+                        projectiles.splice(i, 1);
+                    }
+                }
+                
+                // Обновление врагов
+                for (let i = enemies.length - 1; i >= 0; i--) {
+                    enemies[i].update();
+                    if (enemies[i].destroyed) {
+                        enemies.splice(i, 1);
+                    }
+                }
+                
+                // Обновление босса
+                if (boss) {
+                    boss.update();
+                    if (boss.destroyed) {
+                        boss = null;
+                    }
+                }
+                
+                // Обновление усилений
+                for (let i = powerups.length - 1; i >= 0; i--) {
+                    powerups[i].update();
+                    if (powerups[i].life <= 0) {
+                        powerups.splice(i, 1);
+                    }
+                }
+                
+                checkCollisions();
+            }
+            
+            // Отрисовка
+            projectiles.forEach(p => p.draw());
+            enemies.forEach(e => e.draw());
+            if (boss) boss.draw();
+            powerups.forEach(p => p.draw());
+            drawPlayer();
+            
+            // Частицы
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].life <= 0 && particles[i].type !== 'star') {
+                    particles.splice(i, 1);
+                }
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Управление
+        window.addEventListener('keydown', (e) => {
+            keys[e.code] = true;
+            
+            // Смена оружия
+            if (e.code === 'Digit1') {
+                player.weapon = 0;
+                updateWeaponUI();
+            }
+            if (e.code === 'Digit2') {
+                player.weapon = 1;
+                updateWeaponUI();
+            }
+            if (e.code === 'Digit3') {
+                player.weapon = 2;
+                updateWeaponUI();
+            }
+            
+            // Пауза/меню
+            if (e.code === 'KeyP') {
+                toggleUpgradeMenu();
+            }
+        });
+        
+        window.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+        });
+        
+        window.addEventListener('mousemove', (e) => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+        
+        window.addEventListener('mousedown', () => {
+            mouse.down = true;
+        });
+        
+        window.addEventListener('mouseup', () => {
+            mouse.down = false;
+        });
+        
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+        
+        function updateWeaponUI() {
+            document.querySelectorAll('.weapon-slot').forEach((slot, i) => {
+                slot.classList.toggle('active', i === player.weapon);
+            });
+        }
+        
+        // Инициализация
+        updateWeaponUI();
+    </script>
+</body>
+</html>
